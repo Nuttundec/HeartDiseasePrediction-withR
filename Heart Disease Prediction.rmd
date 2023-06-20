@@ -1,0 +1,443 @@
+---
+title: "Untitled"
+author: "Krittapas Suwansiri 6580233026"
+date: "2023-04-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse) # metapackage with lots of helpful functions
+library(ggplot2) # Data visualization
+library(plotly) # Interactive data visualizations
+library(psych) # Will be used for correlation visualizations
+library(rattle) # Graphing decision trees
+library(caret) # Machine learning
+library(caTools)
+library(dplyr)
+library(cowplot)
+list.files(path = "../input")
+```
+```{r}
+# Read heart_data into the r environment
+heart_data<-read.csv('C:/Users/User/Downloads/framingham.csv')
+heart_data
+```
+EDA
+```{r}
+# Convert binary variables to characters for better visualization
+heart_data <- heart_data %>% 
+  mutate(male = as.character(male),
+        currentSmoker = as.character(currentSmoker),
+        prevalentHyp = as.character(prevalentHyp),
+        diabetes = as.character(diabetes),
+        TenYearCHD = as.character(TenYearCHD))
+```
+Converting binary variables to characters is done for better visualization purposes. By default, R treats binary variables as numeric with 0s and 1s. This can make it difficult to read and interpret the data when we want to look at the actual categories (e.g., male/female or smoker/non-smoker). By converting the binary variables to characters, we can clearly see the categories and their labels in the output. This can be particularly useful when we want to create plots or tables to summarize the data.
+
+```{r}
+x <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = age, fill = TenYearCHD)) +
+  geom_boxplot()
+y <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = totChol, color = TenYearCHD)) +
+  geom_boxplot()
+p <- plot_grid(x, y) 
+title <- ggdraw() + draw_label("1. Relationship between TenYearCHD and Age / TotCHOL", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+```
+```{r}
+x <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = sysBP, fill = TenYearCHD)) +
+  geom_boxplot()
+y <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = diaBP, color = TenYearCHD)) +
+  geom_boxplot()
+p <- plot_grid(x, y) 
+title <- ggdraw() + draw_label("2. Relationship between TenYearCHD and sysBP / diaBP", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+```
+```{r}
+x <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = BMI, fill = TenYearCHD)) +
+  geom_boxplot()
+y <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = heartRate, color = TenYearCHD)) +
+  geom_boxplot()
+p <- plot_grid(x, y) 
+title <- ggdraw() + draw_label("3. Relationship between TenYearCHD and BMI / HeartRate", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+```
+```{r}
+x <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = glucose, fill = TenYearCHD)) +
+  geom_boxplot()
+y <- ggplot(data = heart_data, mapping = aes(x = as.factor(TenYearCHD), y = cigsPerDay, fill = TenYearCHD)) +
+  geom_boxplot()
+p <- plot_grid(x,y) 
+title <- ggdraw() + draw_label("4. Relationship between TenYearCHD and Glucose", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+```
+```{r}
+x <- ggplot(data = heart_data) +
+  geom_count(mapping = aes(x = male, y = TenYearCHD))
+y <- ggplot(data = heart_data) +
+  geom_count(mapping = aes(x = diabetes, y = TenYearCHD))
+p <- plot_grid(x, y) 
+title <- ggdraw() + draw_label("5. Relationship between TenYearCHD and Sex / Diabetes", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+```
+Plot 1: People with CHD have higher mean ages and choloesterol levels
+
+Plot 2: People with CHD have higher mean systolic and diastolic blood pressures
+
+Plot 3: People with CHD have a higher mean BMI, but very similar mean heart rates as people without CHD
+
+Plot 4: People with CHD and without CHD have very similar mean glucose levels
+
+Plot 5: More males than females have CHD and more non-diabetics have CHD compared to diabetics. This doesn't take into account the population proportions.
+
+the plot_grid() function from the cowplot package is used to combine the two plots into one grid with a title on top.
+
+```{r}
+# Convert binary variables back to original.
+heart_data <- heart_data %>% 
+  mutate(male = as.integer(male),
+        currentSmoker = as.integer(currentSmoker),
+        prevalentHyp = as.integer(prevalentHyp),
+        diabetes = as.integer(diabetes),
+        TenYearCHD = as.integer(TenYearCHD))
+```
+
+```{r}
+# Check distribution of each variables
+par(mfrow=c(2,4))
+  hist(heart_data$male)
+  hist(heart_data$age)
+  hist(heart_data$education)
+  hist(heart_data$currentSmoker)
+  hist(heart_data$cigsPerDay)
+  hist(heart_data$BPMeds)
+  hist(heart_data$prevalentStroke)
+  hist(heart_data$prevalentHyp)
+  hist(heart_data$diabetes)
+  hist(heart_data$totChol)
+  hist(heart_data$sysBP)
+  hist(heart_data$diaBP)
+  hist(heart_data$BMI)
+  hist(heart_data$heartRate )
+  hist(heart_data$glucose)
+  hist(heart_data$TenYearCHD)
+```
+```{r}
+# correction of data types As all the below variable have levels as their values, we have to convert them into factors
+heart_data$male <- as.factor(heart_data$male)
+heart_data$education <- as.factor(heart_data$education)
+heart_data$currentSmoker <- as.factor(heart_data$currentSmoker)
+heart_data$BPMeds <- as.factor(heart_data$BPMeds)
+heart_data$prevalentStroke <- as.factor(heart_data$prevalentStroke)
+heart_data$prevalentHyp <- as.factor(heart_data$prevalentHyp)
+heart_data$diabetes <- as.factor(heart_data$diabetes)
+```
+
+```{r}
+# Check NA's
+paste("There are",nrow(heart_data),"rows")
+paste("There are",sum(complete.cases(heart_data)),"complete rows")
+paste("There are",sum(!complete.cases(heart_data)),"incomplete rows")
+```
+```{r}
+# Check structure of data
+str(heart_data)
+```
+```{r}
+# Code to check count of NA's column wise
+colSums(is.na(heart_data))
+```
+```{r}
+#glucose
+heart_data$glucose <- ifelse(is.na(heart_data$glucose), median(heart_data$glucose,na.rm = T), heart_data$glucose)
+colSums(is.na(heart_data))
+```
+```{r}
+#education
+heart_data$education <- ifelse(is.na(heart_data$education), modalvalue(heart_data$education,na.rm = T), heart_data$education)
+colSums(is.na(heart_data))
+```
+```{r}
+#ciggs per day
+heart_data$cigsPerDay <- ifelse(is.na(heart_data$cigsPerDay), modalvalue(heart_data$cigsPerDay,na.rm = T), heart_data$cigsPerDay)
+colSums(is.na(heart_data))
+```
+```{r}
+#bp meds
+heart_data$BPMeds <- ifelse(is.na(heart_data$BPMeds), modalvalue(heart_data$BPMeds,na.rm = T), heart_data$BPMeds)
+colSums(is.na(heart_data))
+```
+```{r}
+#totChol
+heart_data$totChol <- ifelse(is.na(heart_data$totChol), median(heart_data$totChol,na.rm = T), heart_data$totChol)
+colSums(is.na(heart_data))
+```
+```{r}
+#BMI
+heart_data$BMI <- ifelse(is.na(heart_data$BMI), median(heart_data$BMI,na.rm = T), heart_data$BMI)
+colSums(is.na(heart_data))
+```
+```{r}
+#heartRate
+heart_data$heartRate <- ifelse(is.na(heart_data$heartRate), median(heart_data$heartRate,na.rm = T), heart_data$heartRate)
+colSums(is.na(heart_data))
+```
+```{r}
+logistic_model <- glm(heart_data$TenYearCHD~.,family = "binomial", data = heart_data)
+summary(logistic_model)
+```
+```{r}
+# Check Influence point
+plot(logistic_model,4)
+```
+```{r}
+# Remove Influence point
+heart_data <- heart_data[-c(2472,3928,3972),]
+```
+
+```{r}
+nrow(heart_data)
+sum(complete.cases(heart_data))
+```
+```{r}
+logitplot<-function(y,x,ncat=10,...) {
+ brksx<-unique(quantile(x,probs=(0:ncat)/ncat))
+ nbrksx<-length(brksx)
+ cutx<-cut(x,breaks=brksx,include.lowest=TRUE)
+ yt<-table(data.frame(y,cutx))
+ mx<-tapply(x,cutx,FUN=mean)
+ logity<-log((yt[2,]+0.5)/(yt[1,]+0.5))
+ plot(mx,logity,...)
+ }
+par(mfrow=c(1,2))
+ logitplot(heart_data$TenYearCHD,heart_data$age,xlab="age",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$cigsPerDay,xlab="cigsPerDay",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$totChol,xlab="totChol",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$sysBP,xlab="sysBP",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$diaBP,xlab="diaBP",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$BMI,xlab="bmi",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$heartRate,xlab="heartRate",ylab="adjusted sample logit")
+ logitplot(heart_data$TenYearCHD,heart_data$glucose,xlab="glucose",ylab="adjusted sample logit")
+ 
+# Scatter plot show data is good linear relationship
+```
+
+```{r}
+# Split data into train and test
+set.seed(30)
+splitheart_data <- sample.split(heart_data$TenYearCHD, SplitRatio = 0.75)
+train_heart_data <- heart_data[splitheart_data==T,]
+test_heart_data <- heart_data[splitheart_data==F,]
+nrow(train_heart_data)
+nrow(test_heart_data)
+```
+```{r}
+# Run logitic regression
+full_model <- glm(TenYearCHD~., data = train_heart_data, family = "binomial")
+summary(full_model)
+```
+```{r}
+# Logistic model after removing insignificant variables
+reduce_model <- step(full_model, trace=F)
+
+# 1. Hypothesis Testing : Wald's Test
+summary(reduce_model)
+```
+
+```{r}
+round(summary(reduce_model)$coefficients, 2)
+```
+
+```{r}
+cat("Sex: Being a male increases the odds of having heart disease by", round((exp(0.57)-1)*100,0), "%", "\n")
+cat("Age: Every additional year in patient age increases the odds of heart disease by", round((exp(0.06)-1)*100,0), "%", "\n")
+cat("Cigarrets Per Day: Every additional 5 daily ciggaret increases the odds of heart disease by", round(5*(exp(0.02)-1)*100,0), "%", "\n")
+#cat("BPMeds: Every additional year in patient age increases the odds of heart disease by", round((exp(0.38)-1)*100,0), "%", "\n")
+cat("prevalentStroke1: Having had a stroke increases the odds of heart disease by", round((exp(1.08)-1)*100,0), "%", "\n")
+#cat("prevalentHyp1: Having prevalent hypertension increases the odds of heart disease by", round((exp(0.26)-1)*100,0), "%", "\n")
+cat("Sys Blood Pressure: Every additional 10 units of Sys Blood Pressure increases the odds of heart disease by", round(10*(exp(0.01)-1)*100,0), "%", "\n")
+cat("Glucose: Every additional 10 units of glucose levels increases the odds of heart disease by", round(10*(exp(0.01)-1)*100,0), "%")
+```
+
+```{r}
+# 2. Comparing Nested Models
+
+LRT<-deviance(reduce_model)-deviance(full_model)
+1-pchisq(LRT, df.residual(reduce_model)-df.residual(full_model))
+
+# 0.829 > 0.05 -> Accept H0 -> Model Fit Data
+```
+```{r}
+# 3. Goodness of Fit : Hosmer-Lemeshow Test
+
+hosmerlem <- function (y, yhat, g=10) 
+  { 
+  cutyhat <- cut(yhat, breaks=quantile(yhat, probs=seq(0, 1, 1/g)), include.lowest=T)
+  obs <- xtabs(cbind(1-y, y) ~ cutyhat) 
+  expect <- xtabs(cbind(1-yhat, yhat) ~ cutyhat) 
+  chisq <-sum((obs-expect)^2/expect) 
+  P <- 1-pchisq(chisq, g-2) 
+  c('xˆ2' = chisq, Df = g-2, 'P(>Chi)' = P) 
+} 
+hosmerlem(train_heart_data$TenYearCHD,reduce_model$fitted.values)
+
+# 0.76 > 0.05 -> Accept H0 -> Model Fit Data
+```
+
+```{r}
+# Predicting TenYearCHD on test data
+pred_model <- predict(reduce_model,newdata = test_heart_data[,-16],type = "response")
+summary(pred_model)
+
+pred_test_data <- ifelse(pred_model>0.5,1,0)
+summary(pred_test_data)
+```
+```{r}
+# Confusion Matrix
+confusion_matrix <- table(pred_test_data,test_heart_data$TenYearCHD)
+confusion_matrix
+```
+```{r}
+pre<-17/(17+6)
+recall<-17/(17+144)
+f1<-(2*(pre*recall))/(pre+recall)
+f1
+```
+
+```{r}
+# Overall Accuracy with threshold 0.5
+acc <- (sum(diag(confusion_matrix))/sum(confusion_matrix))*100
+paste("Overall accuracy with threshold 0.5 is",acc,"%")
+```
+```{r}
+pred_test_data_lowthreshold <- ifelse(pred_model>0.1,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- ((443+129)/(443+32+455+129))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.1 is",acc_for_1,"%")
+```
+```{r}
+pre<-129/(129+455)
+recall<-129/(129+32)
+f1<-(2*(pre*recall))/(pre+recall)
+f1
+```
+
+```{r}
+#install.packages('pROC')
+library(pROC)
+roc(test_heart_data$TenYearCHD,pred_model,plot=TRUE)
+
+# Area = 0.7283 > 0.5 -> Not bad
+```
+
+```{r}
+# cuttoff = 0.6
+pred_test_data_lowthreshold <- ifelse(pred_model>0.6,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- (129/(129+32))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.1 is",acc_for_1,"%")
+
+pre<-6/(6+2)
+recall<-6/(6+155)
+f1<-(2*(pre*recall))/(pre+recall)
+print(f1)
+```
+
+```{r}
+# cuttoff = 0.2
+pred_test_data_lowthreshold <- ifelse(pred_model>0.2,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- ((95+714)/(714+95+184+66))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.2 is",acc_for_1,"%")
+
+pre<-95/(95+184)
+recall<-95/(95+66)
+f1<-(2*(pre*recall))/(pre+recall)
+print(f1)
+```
+```{r}
+# cuttoff = 0.3
+pred_test_data_lowthreshold <- ifelse(pred_model>0.3,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- (129/(129+32))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.1 is",acc_for_1,"%")
+
+pre<-44/(44+67)
+recall<-44/(44+117)
+f1<-(2*(pre*recall))/(pre+recall)
+print(f1)
+```
+```{r}
+# cuttoff = 0.15
+pred_test_data_lowthreshold <- ifelse(pred_model>0.15,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- (129/(129+32))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.1 is",acc_for_1,"%")
+
+pre<-111/(111+291)
+recall<-111/(111+50)
+f1<-(2*(pre*recall))/(pre+recall)
+print(f1)
+```
+
+
+############################################################################################################################
+Other conclusion for specific group
+
+Although the accuracy of the model is 75%-80%, it is not effectively identifying individuals with a higher risk of heart disease. Our primary interest is in predicting those individuals who are at greater risk, as this will allow for earlier treatment. Therefore, we will attempt to adjust the threshold and calculate the accuracy specifically for individuals with a 10-year risk of coronary heart disease.
+```{r}
+pred_test_data_lowthreshold <- ifelse(pred_model>0.1,1,0)
+
+confusion_matrix <- table(pred_test_data_lowthreshold,test_heart_data$TenYearCHD)
+confusion_matrix
+
+acc_for_1 <- (129/(129+32))*100
+paste("Accuracy for those who have 10 year risk of coronary heart disease with threshold 0.1 is",acc_for_1,"%")
+```
+The accuracy for individuals who have a 10-year risk of coronary heart disease with a threshold of 0.1 is 80.12. This indicates that our model is capable of accurately predicting individuals who are at risk of heart disease, allowing us to provide early treatment and guidance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
